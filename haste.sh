@@ -1,187 +1,254 @@
 #!/usr/bin/env bash
 
-for code in {0..7};
-do
-	declare f$code=$(printf '\e[3'$code'm')
-	declare b$code=$(printf '\e[4'$code'm')
-done
+HASTE_VERSION=0.1
 
-read -rd '' logo <<'EOF'
-__   _    _    ____ _____ _____         _  _   
-| | | |  / \  / ___|_   _| ____| __   _| || |  
-| |_| | / _ \ \___ \ | | |  _|   \ \ / / || |_ 
-|  _  |/ ___ \ ___) || | | |___   \ V /|__   _|
-|_| |_/_/   \_\____/ |_| |_____|   \_/    |_|  
-HASTE (is) another shell text editor
-
-		(^O)pen a file
-		(^Q)uit
-
-EOF
-
-trap 'get_term && redraw_all' WINCH
-
-## Setup
+trap 'get_term' WINCH
+#trap 'notify Error: $LINENO' ERR
 
 get_term() {
-	read -r lines columns _ < <(stty size)
+	IFS='[;' read -sp $'\e7\e[9999;9999H\e[6n\e8' -d R -rs _ lines columns
 }
 
 setup_term() {
-	printf '\e[?1049h'
 	read -r default_settings < <(stty -g)
-	printf '\e[?7l'
-	printf '\e[?25l'
-	stty -ixon
-	stty -echo
-	stty intr ''
+	printf '\e[?1049h'
+	printf '\e[?2004h' # Bracketed paste
+	printf '\e[?7l'    # Disable line wrapping
+	#printf '\e[?25l'  # Hide cursor
+	stty -ixon # Disable XON/XOFF
+	stty -echo # Dont echo user input
+	stty intr '' # Unbind sigint, normally ctrl-c
 }
 
 restore_term() {
-	stty "$default_settings"
 	printf '\e[?1049l'
+	stty "$default_settings"
 }
 
-## Graphics
-
-go_to() {
-	# Lines then columns
-	printf '\e[%s;%sH' "$1" "$2"
+bottom_bar() {
+	local base_string=" haste | $file_name ($curl,$curc) | $topl $((curl-topl)) $(( lines - scroll_margin - 3 ))"
+	if [[ $modified == true ]];
+	then
+		base_string+=" | modified"
+	else
+		base_string+=" | unmodified"
+	fi
+	printf '\e[%sH\e[7m%-*s\e[0m' "$((lines-1))" "$columns" "$base_string"
 }
 
-draw_logo() {
-	local log_lines=$(wc -l <<<"$logo")
-	local log_columns=$(wc -m <<<"${logo%%$'\n'*}")
-	local temp_c=$(( (columns / 2) - (log_columns / 2) ))
-	go_to $(( (lines / 2) - (log_lines / 2 ) ))
-	while IFS= read -r line; do
-		printf '\r\e['$temp_c'C%s\n' "$line"
-	done <<< "$logo"
+notify() {
+	local message="[ $* ]"
+	printf '\e[%sH\e[K\e[%sC' "$lines" "$(( ( columns / 2 ) - ( ${#message} / 2 ) ))"
+	printf '\e[7m%s\e[0m' "$message"
 }
 
-draw_top() {
-	local topx=$1
-	local topy=$2
-	local width=$(( $3 - $1 ))
-	local bar="$4"
-
-	go_to "$topy" "$topx"
-	printf '\e[7m+%*s+\e[0m' "$((width-2))" | tr ' ' '-'
-	go_to "$topy" "$((topx+1))"
-	printf '\e[7m%s\e[0m' "$bar"
+draw_text() {
+	local count=$((topl+1))
+	printf '\e[H'
+	for line in "${text_buffer[@]:$topl:$((lines-2))}"
+	do
+		[[ "$line_numbers" = true ]] && printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
+		printf '\e[K'
+		echo "$line"
+	done
 }
 
-draw_bot() {
-	go_to "$((lines-1))" 1
-	printf '\e[7m%*s\e[0m' "$columns" | tr ' ' '-'
+draw_cursor() {
+	local temp="${text_buffer[curl]:0:$curc}"
+	printf '\e[%sH' "$((curl - topl + 1))"
+	[[ "$line_numbers" = true ]] && printf '\e[4C'
+	printf '\e[31m'
+	echo -n "$temp"
+	printf '\e[0m'
 }
 
-draw_box() {
-	local topx=$1
-	local topy=$2
-	local width=$(( $3 - $1 ))
-	local height=$(( $4 - $2 ))
-	((width-=2))
+column_san() {
+	if (( curc < 0 )) && (( curl > 0 ));
+	then
+		(( curl -= 1 ))
+		(( curc = ${#text_buffer[curl]} ))
+	elif (( curc < 0 ));
+	then
+		(( curc = 0 ))
+	fi
+
+	if (( curc > ${#text_buffer[curl]} )) && (( curl < ${#text_buffer[@]} - 1 ));
+	then
+		(( curl += 1 ))
+		(( curc = 0 ))
+	elif (( curc >= ${#text_buffer[curl]} ));
+	then
+		(( curc = ${#text_buffer[curl]} ))
+	fi
+}
+
+line_san() {
+	(( curl <= 0 )) && curl=0
+	(( curl > ${#text_buffer[@]} - 1 )) && (( curl = ${#text_buffer[@]} - 1 ))
+}
+
+scroll() {
+	# Scroll up top
+	(( ( curl - topl ) < scroll_margin )) && (( topl = curl- scroll_margin ))
+	# Scroll down bottom
+	(( ( curl - topl ) > ( lines - scroll_margin - 3 ) )) && (( topl = curl - ( lines - scroll_margin - 3 ) ))
+}
+
+insert_char() {
+	local char="$1"
+	text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl]:0:curc}$char${text_buffer[curl]:curc}" "${text_buffer[@]:curl+1}")
+	modified=true
+}
+
+backspace() {
+	if (( curc >= 1 ));
+	then
+		text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl]:0:curc-1}${text_buffer[curl]:curc}" "${text_buffer[@]:curl+1}")
+		((curc-=1))
+	elif (( curl > 0 ))
+	then
+		(( curc = ${#text_buffer[curl-1]} ))
+		text_buffer=("${text_buffer[@]:0:curl-1}" "${text_buffer[curl-1]}${text_buffer[curl]}" "${text_buffer[@]:curl+1}")
+		(( curl -= 1 ))
+	fi
+	modified=true
+}
+
+newline() {
+	text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl]:0:curc}" "${text_buffer[curl]:curc}" "${text_buffer[@]:curl+1}")
+}
+
+input() {
+	read -rsN1 char
+	case "$char" in
+		[[:print:]]|$'\t')
+			#notify "Keypress: $char"
+			insert_char "$char"
+			((curc+=1)) ;;
+		$'\c?')
+			backspace ;;
+		$'\e')
+			read -rsN5 -t 0.001 char
+			case "$char" in
+				'[5~')
+					(( curl -= lines - 3 )) ;;
+				'[6~')
+					(( curl += lines - 3 )) ;;
+				'[A')
+					((curl-=1)) ;;
+				'[B')
+					((curl+=1)) ;;
+				'[C')
+					((curc+=1)) ;;
+				'[D')
+					((curc-=1)) ;;
+				'') command_mode ;;
+				*) ;;
+			esac ;;
+		$'\n')
+			newline
+			(( curc = 0 ))
+			(( curl += 1 ))
+			line_san ;;
+		$'\ch') help_box 10 10 $((lines-20)) $((columns-20)) ;;
+		$'\cq') running=false ;;
+		$'\cs') modified=false ;;
+	esac
+	line_san
+	column_san
+	scroll
+	(( topl <= 0 )) && topl=0
+	(( topl >= ${#text_buffer[@]} - lines + 2 )) && (( topl = ${#text_buffer[@]} - lines + 2 ))
+}
+
+help_box() {
+	local topl="$1"
+	local topc="$2"
+	local height="$3"
 	((height-=2))
-	go_to "$topy" "$topx"
-	printf '/%*s+\' "$width" | tr ' ' '-'
-	for i in $(seq 1 $height );
+	local width="$4"
+	((width-=2))
+	readarray -t help_text < <(cat <<-'EOF' | fold -s -w "$width"
+	  Welcome to haste!
+	Haste is a text editor written in (almost) pure bash
+
+	  Navigation
+	It can be navigated with the arrow keys
+	Press Ctrl - Q to exit
+	Press Ctrl - S to save current buffer to file
+	Press Ctrl - H to bring up help (but you already knew that)
+
+	  Command mode
+	This is where the benefits of being written in bash begin to outweigh the negatives
+	Press Esc to enter command mode
+	You should now be in a prompt at the bottom of your terminal
+	You now have two options:
+	 - Press escape again... the story ends, you go back to your text editor and believe whatever you want to believe.
+	 - Enter one of the following commands
+
+	EOF
+	)
+	printf '\e[%s;%sH\e[7m+%*s+\e[0m\n' "$topl" "$topc" "$width" ''
+	for line in "${help_text[@]:0:$height}"
 	do
-		go_to $((topy + i)) "$topx"
-		printf '|%*s|' "$width"
+		printf '\e[%sC\e[7m \e[0m%-*s\e[7m \e[0m\n' "$((topc-1))" "$width" " $line"
 	done
-
+	printf '\e[%s;%sH\e[7m+%*s+\e[0m' "$((topl+height+1))" "$topc" "$width" 'Press any key to close '
+	read -rsn1 _
 }
 
-switch_buffer() {
-	local index=$1
-	read -r topx topy xperc yperc _ topl _ _ _ _ file _ <<<"${buffer_meta[$index]}"
+command_mode() {
+	printf '\e[%sH' "$lines"
+	stty echo
+	read -r -t 1 _
+	stty -echo
 }
 
-do_perc() {
-	(( topx=(topx * columns ) / 100 ))
-	(( topy=(topy * (lines-1) ) / 100 ))
-	if [[ "$topx" -eq 0 ]];
+#
+# Main
+#
+
+
+scroll_margin=3
+line_numbers=true
+
+for opt in "$@"
+do
+	if [[ -f "$opt" ]];
 	then
-		topx=1
-	fi
-	if [[ "$topy" -eq 0 ]];
-	then
-		topy=1
-	fi
-
-	(( xperc=(xperc * columns ) / 100 ))
-	(( yperc=(yperc * (lines-1) ) / 100 ))
-	((xperc+=2))
-	((yperc+=1))
-
-	draw_box "$topx" "$topy" "$xperc" "$yperc"
-	draw_top "$topx" "$topy" "$xperc" "$file |"
-
-	go_to "$((topy+1))" "$((topx))"
-	# This is fucking ridiculous, but its funny so its staying
-	<<< "${buffer_text[index]}" sed -n "$topl,$(( topl + (yperc-topy-2) ))p" |\
-	while IFS= read -r line;
-	do
-		printf '\e[%sC%s\n' "$topx" "$line"
-	done
-}
-
-## Magic (not graphics)
-
-input_loop() {
-	local running=true
-	while $running;
-	do
-		read -rsn1 mode
-		case "$mode" in
-			$'\e') 
-					read -rsn2 mode
-					case "$mode" in
-						'[A') ;; # Up
-						'[B') ;; # Down
-						'[C') ;; # Right
-						'[D') ;; # Left
-						'[5') read -rsn1 _ ;; # PgUp
-						'[6') read -rsn1 _ ;; # PgDn
-					esac ;;
-			$'\cc') ;;
-			$'\cq') running=false ;;
-			$'\c?') ;; # Delete
-			[[:print:]]) ;; # Any POSIX printable 
+		# Files
+		file_name="$opt"
+		readarray -t text_buffer <"$opt"
+	else
+		# Flags
+		case "$opt" in
+			'--scroll_margin='*)
+				temp=$(<<<"$opt" cut -d'=' -f2)
+				# Canonising as a number is one way to check
+				((temp)) && scroll_margin="$temp" ;;
 		esac
-		printf '\e[?25l'
-	done
-}
+	fi
+done
 
 get_term
-if [[ $lines -ge 24 ]] && [[ $columns -ge 80 ]];
-then
-	setup_term
-	# Main
-	# meta: c1, l1, c2, l2, modified (bool), topline, length, cursorline, cursorcol, file location
-	buffer_meta=(
-	"1 1 100 100 true 1 $(wc -l /home/alfie/.bashrc) 1 1 /home/alfie/.bashrc"
-	)
+setup_term
 
-	buffer_text=()
-	for number in $( seq 1 "${#buffer_meta[@]}" )
-	do
-		read -r _ _ _ _ _ _ _ file _ <<<"${buffer_meta[number-1]}"
-		buffer_text[number-1]="$(< $file)"
-	done
-	for number in $( seq 1 "${#buffer_meta[@]}" )
-	do
-		switch_buffer "$((number-1))"
-		do_perc
-	done
+curl=0
+curc=0
+topl=0
+modified=false
+line_numbers=true
 
-	draw_bot
-	#draw_logo
+running=true
+notify "Welcome to haste! Press ^H for help"
+while $running;
+do
+	echo -n "$(
+	bottom_bar
+	draw_text
+	draw_cursor
+	)"
+	input
+done
 
-	input_loop
-
-	restore_term
-else
-	printf '\nYour terminal must be at least 24x80, yours is %sx%s' "$lines" "$columns"
-fi
+restore_term
