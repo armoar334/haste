@@ -27,7 +27,7 @@ restore_term() {
 }
 
 bottom_bar() {
-	local base_string=" haste | $file_name ($((curl+1)),$((curc+1))) | $((curl-topl)) $topl | ${#text_buffer[@]}"
+	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]} "
 	if [[ $modified == true ]];
 	then
 		base_string+=" | modified"
@@ -40,7 +40,9 @@ bottom_bar() {
 notify() {
 	local message="[ $* ]"
 	printf '\e[%sH\e[K\e[%sC' "$lines" "$(( ( columns / 2 ) - ( ${#message} / 2 ) ))"
-	printf '\e[7m%s\e[0m' "$message"
+	printf '\e[7m'
+	echo -n "$message" | cat -v
+	printf '\e[0m'
 }
 
 draw_text() {
@@ -55,7 +57,7 @@ draw_text() {
 }
 
 draw_cursor() {
-	local temp="${text_buffer[curl]:0:$curc}"
+	local temp="${text_buffer[curl]:0:curc}"
 	printf '\e[%sH' "$((curl - topl + 1))"
 	[[ "$line_numbers" = true ]] && printf '\e[4C'
 	printf '\e[31m'
@@ -135,7 +137,14 @@ input() {
 		$'\e')
 			read -rsN5 -t 0.001 char
 			case "$char" in
-				'[1;3B') true ;; # Alt + down
+				'[1;3A')
+					text_buffer=("${text_buffer[@]:0:curl-1}" "${text_buffer[curl]}" "${text_buffer[curl-1]}" "${text_buffer[@]:curl+1}")
+					((curl-=1)) ;; # Alt + up
+				'[1;3B')
+					text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl+1]}" "${text_buffer[curl]}" "${text_buffer[@]:curl+2}")
+					((curl+=1)) ;; # Alt + down
+				'[1;3C') ((curc=${#text_buffer[curl]})) ;; # Alt + right
+				'[1;3D') ((curc=0)) ;; # Alt + left
 				'[3~')
 					(( curc += 1 ))
 					column_san
@@ -162,11 +171,13 @@ input() {
 			line_san ;;
 		$'\ca') (( curc = 0 )) ;;
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
-		$'\cc') duplicate_line ;;
+		$'\cd') duplicate_line ;;
 		$'\ch') help_box 5 5 $((lines-10)) $((columns-10)) ;;
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cq') running=false ;;
+		$'\cr') exec $0 ${args[@]} ;;
 		$'\cs') save_func ;;
+		*) notify "Unknown / Unbound key $char" ;;
 	esac
 	line_san
 	column_san
@@ -198,10 +209,11 @@ help_box() {
 	Press Ctrl - Q to exit
 	Press Ctrl - S to save current buffer to file
 	Press Ctrl - H to bring up help (but you already knew that)
-	Press Ctrl - E to go to end of line
-	Press Ctrl - A to go to start of line
-	Press Ctrl - C to duplicate line
+	Press Ctrl - E / Alt - Right to go to end of line
+	Press Ctrl - A / Alt - Left to go to start of line
+	Press Ctrl - D to duplicate line
 	Press Ctrl - K to delete line
+	Press Ctrl - R to reload the script (mostly just a development thing, mostly just for me)
 
 	  Command mode
 	This is where the benefits of being written in bash begin to outweigh the negatives
@@ -267,7 +279,9 @@ command_mode() {
 scroll_margin=3
 line_numbers=true
 
-for opt in "$@"
+args=("$@")
+
+for opt in "${args[@]}"
 do
 	if [[ -f "$opt" ]];
 	then
@@ -298,7 +312,7 @@ line_numbers=true
 
 running=true
 notify "Welcome to haste! Press ^H for help"
-while $running;
+while [[ $running == true ]];
 do
 	echo -n "$(
 	bottom_bar
