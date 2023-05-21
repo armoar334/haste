@@ -26,7 +26,7 @@ restore_term() {
 }
 
 bottom_bar() {
-	local base_string=" haste | $file_name ($((curl+1)),$((curc+1)))"
+	local base_string=" haste | $file_name ($((curl+1)),$((curc+1))) | $((curl-topl)) $topl | ${#text_buffer[@]}"
 	if [[ $modified == true ]];
 	then
 		base_string+=" | modified"
@@ -89,9 +89,9 @@ line_san() {
 
 scroll() {
 	# Scroll up top
-	(( ( curl - topl ) < scroll_margin )) && (( topl = curl- scroll_margin ))
+	(( ( curl - topl ) < scroll_margin )) && (( ${#text_buffer[@]} > lines - 3 )) && (( topl = curl - scroll_margin ))
 	# Scroll down bottom
-	(( ( curl - topl ) > ( lines - scroll_margin - 3 ) )) && (( topl = curl - ( lines - scroll_margin - 3 ) ))
+	(( ( curl - topl ) > ( lines - scroll_margin - 3 ) )) && (( ${#text_buffer[@]} > lines - 3 )) && (( topl = curl - ( lines - scroll_margin - 3 ) ))
 }
 
 insert_char() {
@@ -118,6 +118,10 @@ newline() {
 	text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl]:0:curc}" "${text_buffer[curl]:curc}" "${text_buffer[@]:curl+1}")
 }
 
+duplicate_line() {
+	text_buffer=("${text_buffer[@]:0:$curl}" "${text_buffer[curl]}" "${text_buffer[curl]}" "${text_buffer[@]:$((curl+1))}")
+}
+
 input() {
 	read -rsN1 char
 	case "$char" in
@@ -130,6 +134,10 @@ input() {
 		$'\e')
 			read -rsN5 -t 0.001 char
 			case "$char" in
+				'[3~')
+					(( curc -= 1 ))
+					(( curc < 0 )) && curc=1
+					backspace ;;
 				'[5~')
 					(( curl -= lines - 3 )) ;;
 				'[6~')
@@ -150,6 +158,9 @@ input() {
 			(( curc = 0 ))
 			(( curl += 1 ))
 			line_san ;;
+		$'\ca') (( curc = 0 )) ;;
+		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
+		$'\cc') duplicate_line ;;
 		$'\ch') help_box 5 5 $((lines-10)) $((columns-10)) ;;
 		$'\cq') running=false ;;
 		$'\cs') save_func ;;
@@ -157,8 +168,8 @@ input() {
 	line_san
 	column_san
 	scroll
-	(( topl <= 0 )) && topl=0
 	(( topl >= ${#text_buffer[@]} - lines + 2 )) && (( topl = ${#text_buffer[@]} - lines + 2 ))
+	(( topl <= 0 )) && topl=0
 }
 
 save_func() {
@@ -184,6 +195,10 @@ help_box() {
 	Press Ctrl - Q to exit
 	Press Ctrl - S to save current buffer to file
 	Press Ctrl - H to bring up help (but you already knew that)
+	Press Ctrl - E to go to end of line
+	Press Ctrl - A to go to start of line
+	Press Ctrl - C to duplicate line
+
 
 	  Command mode
 	This is where the benefits of being written in bash begin to outweigh the negatives
@@ -199,6 +214,7 @@ help_box() {
 	   line: run the specified parameter expansion on the current line only
 	   buffer: run the specified parameter expansion on the whole buffer
 	   line and buffer both take arguments in the form of bash parameter expansions, such as '//a/A' or '##a'. See [https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html] for further detail. 
+	   This is useful for testing things such as testing PS1 variables without opening a whole extra bash session
 
 	EOF
 	)
@@ -265,7 +281,7 @@ done
 get_term
 setup_term
 
-[[ -z "${text_buffer[@]}" ]] && text_buffer=('' '' '')
+[[ -z "${text_buffer[@]}" ]] && text_buffer=('' '' '' '' '' '')
 
 curl=0
 curc=0
