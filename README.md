@@ -20,3 +20,5 @@ I think however, that the issues are far outweighed by the positives. The bash s
 	I'll do it later. not hard, just tedious
  - Custom keybinds:  
 	I'm honestly not super bothered about this. If you want custom keybinds, you can realistically just edit the script itself. It isn't like linecomp where custom keybinds can be a make or break feature for adoption, most text editors have set keybinds anyway.
+ - Figure out why it doesnt like being resized  
+	Might be terminal specific, dont know atm

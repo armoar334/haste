@@ -171,8 +171,8 @@ input() {
 			line_san ;;
 		$'\ca') (( curc = 0 )) ;;
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
-		$'\cd') duplicate_line ;;
-		$'\ch') help_box 5 5 $((lines-10)) $((columns-10)) ;;
+		$'\cd') duplicate_line && (( curc += 1 )) ;;
+		$'\ch') help_box 1 $(( columns / 2 )) $(( lines - 1 )) $(( columns - ( columns / 2 ) + 1 )) ;;
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cq') running=false ;;
 		$'\cr') exec $0 ${args[@]} ;;
@@ -229,15 +229,15 @@ help_box() {
 	   line: run the specified parameter expansion on the current line only
 	   buffer: run the specified parameter expansion on the whole buffer
 	   line and buffer both take arguments in the form of bash parameter expansions, such as '//a/A' or '##a'. See [https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html] for further detail. 
-	   This is useful for testing things such as testing PS1 variables without opening a whole extra bash session
+	   This is useful for testing things such as testing PS1 variables (@P) without opening a whole extra bash session
 
 	EOF
 	)
-	printf '\e[%s;%sH\e[7m+%*s+\e[0m\n' "$topl" "$topc" "$width" ''
+	printf '\e[%s;%sH\e[7m+%*s+\e[0m\n' "$topl" "$topc" "$width" '' | tr ' ' '-'
 	for index in $(seq 0 $height)
 	do
 		[[ "${help_text[index]+abc}" ]] && line="${help_text[index]}" || line=''
-		printf '\e[%sC\e[7m \e[0m%-*s\e[7m \e[0m\n' "$((topc-1))" "$width" " $line"
+		printf '\e[%sC\e[7m|\e[0m%-*s\e[7m|\e[0m\n' "$((topc-1))" "$width" " $line"
 	done
 	printf '\e[%s;%sH\e[7m+%*s+\e[0m' "$((topl+height+1))" "$topc" "$width" 'Press any key to close '
 	read -rsn1 char
