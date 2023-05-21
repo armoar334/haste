@@ -15,6 +15,7 @@ setup_term() {
 	printf '\e[?2004h' # Bracketed paste
 	printf '\e[?7l'    # Disable line wrapping
 	#printf '\e[?25l'  # Hide cursor
+	clear
 	stty -ixon # Disable XON/XOFF
 	stty -echo # Dont echo user input
 	stty intr '' # Unbind sigint, normally ctrl-c
@@ -49,7 +50,7 @@ draw_text() {
 	do
 		[[ "$line_numbers" = true ]] && printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
 		printf '\e[K'
-		echo "$line"
+		echo "${line//$'\t'/    }"
 	done
 }
 
@@ -58,7 +59,7 @@ draw_cursor() {
 	printf '\e[%sH' "$((curl - topl + 1))"
 	[[ "$line_numbers" = true ]] && printf '\e[4C'
 	printf '\e[31m'
-	echo -n "$temp"
+	echo -n "${temp//$'\t'/    }"
 	printf '\e[0m'
 }
 
@@ -281,7 +282,7 @@ done
 get_term
 setup_term
 
-[[ -z "${text_buffer[@]}" ]] && text_buffer=('' '' '' '' '' '')
+[[ -z "${text_buffer[@]}" ]] && text_buffer=('')
 
 curl=0
 curc=0
