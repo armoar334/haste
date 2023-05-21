@@ -150,7 +150,7 @@ input() {
 			(( curc = 0 ))
 			(( curl += 1 ))
 			line_san ;;
-		$'\ch') help_box 10 10 $((lines-20)) $((columns-20)) ;;
+		$'\ch') help_box 5 5 $((lines-10)) $((columns-10)) ;;
 		$'\cq') running=false ;;
 		$'\cs') modified=false ;;
 	esac
@@ -184,13 +184,21 @@ help_box() {
 	You should now be in a prompt at the bottom of your terminal
 	You now have two options:
 	 - Press escape again... the story ends, you go back to your text editor and believe whatever you want to believe.
-	 - Enter one of the following commands
+	 - Enter one of the following commands, and you see how deep the rabbithole goes...
+	  Interface
+	   line_numbers=[true/false]: set linenumbers on or off
+	   scroll_margin=[0-9]: set scroll margin to the specified number
+	  Text editing
+	   line: run the specified parameter expansion on the current line only
+	   buffer: run the specified parameter expansion on the whole buffer
+	   line and buffer both take arguments in the form of bash parameter expansions, such as '//a/A' or '##a'. See [https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html] for further detail. 
 
 	EOF
 	)
 	printf '\e[%s;%sH\e[7m+%*s+\e[0m\n' "$topl" "$topc" "$width" ''
-	for line in "${help_text[@]:0:$height}"
+	for index in $(seq 0 $height)
 	do
+		[[ "${help_text[index]+abc}" ]] && line="${help_text[index]}" || line=''
 		printf '\e[%sC\e[7m \e[0m%-*s\e[7m \e[0m\n' "$((topc-1))" "$width" " $line"
 	done
 	printf '\e[%s;%sH\e[7m+%*s+\e[0m' "$((topl+height+1))" "$topc" "$width" 'Press any key to close '
@@ -198,9 +206,26 @@ help_box() {
 }
 
 command_mode() {
+	local temp
+	local temp_2
 	printf '\e[%sH' "$lines"
 	stty echo
-	read -r -t 1 _
+	read -re -p '$ ' temp
+	case "$temp" in
+		'line_numbers='*|'scroll_margin='*)
+			eval "$temp" ;;
+		'line'*)
+			temp="$(echo $temp | cut -d' ' -f2-)"
+			temp_2="${text_buffer[$curl]}"
+			eval 'temp=${temp_2'"$temp"'}' 2>&1
+			text_buffer=("${text_buffer[@]:0:$curl}" "$temp" "${text_buffer[@]:$((curl+1))}") ;;
+		'buffer'*)
+			temp="$(echo $temp | cut -d' ' -f2-)"
+			eval 'temp=("${text_buffer[@]'"$temp"'}")' 2>&1
+			clear
+			printf '%s\n' "${text_buffer[@]}"
+			text_buffer=("${temp[@]}") ;;
+	esac
 	stty -echo
 }
 
