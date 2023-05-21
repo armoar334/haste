@@ -228,7 +228,11 @@ help_box() {
 		printf '\e[%sC\e[7m \e[0m%-*s\e[7m \e[0m\n' "$((topc-1))" "$width" " $line"
 	done
 	printf '\e[%s;%sH\e[7m+%*s+\e[0m' "$((topl+height+1))" "$topc" "$width" 'Press any key to close '
-	read -rsn1 _
+	read -rsn1 char
+	case "$char" in
+		$'\e')
+			read -rsN5 -t 0.001 _
+	esac
 }
 
 command_mode() {
