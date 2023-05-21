@@ -120,7 +120,7 @@ newline() {
 }
 
 duplicate_line() {
-	text_buffer=("${text_buffer[@]:0:$curl}" "${text_buffer[curl]}" "${text_buffer[curl]}" "${text_buffer[@]:$((curl+1))}")
+	text_buffer=("${text_buffer[@]:0:$curl}" "${text_buffer[curl]}" "${text_buffer[curl]}" "${text_buffer[@]:curl+1}")
 }
 
 input() {
@@ -135,9 +135,10 @@ input() {
 		$'\e')
 			read -rsN5 -t 0.001 char
 			case "$char" in
+				'[1;3B') true ;; # Alt + down
 				'[3~')
-					(( curc -= 1 ))
-					(( curc < 0 )) && curc=1
+					(( curc += 1 ))
+					column_san
 					backspace ;;
 				'[5~')
 					(( curl -= lines - 3 )) ;;
@@ -163,6 +164,7 @@ input() {
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
 		$'\cc') duplicate_line ;;
 		$'\ch') help_box 5 5 $((lines-10)) $((columns-10)) ;;
+		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cq') running=false ;;
 		$'\cs') save_func ;;
 	esac
@@ -199,7 +201,7 @@ help_box() {
 	Press Ctrl - E to go to end of line
 	Press Ctrl - A to go to start of line
 	Press Ctrl - C to duplicate line
-
+	Press Ctrl - K to delete line
 
 	  Command mode
 	This is where the benefits of being written in bash begin to outweigh the negatives
