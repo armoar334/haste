@@ -26,7 +26,7 @@ restore_term() {
 }
 
 bottom_bar() {
-	local base_string=" haste | $file_name ($curl,$curc) | $topl $((curl-topl)) $(( lines - scroll_margin - 3 ))"
+	local base_string=" haste | $file_name ($((curl+1)),$((curc+1)))"
 	if [[ $modified == true ]];
 	then
 		base_string+=" | modified"
@@ -152,13 +152,20 @@ input() {
 			line_san ;;
 		$'\ch') help_box 5 5 $((lines-10)) $((columns-10)) ;;
 		$'\cq') running=false ;;
-		$'\cs') modified=false ;;
+		$'\cs') save_func ;;
 	esac
 	line_san
 	column_san
 	scroll
 	(( topl <= 0 )) && topl=0
 	(( topl >= ${#text_buffer[@]} - lines + 2 )) && (( topl = ${#text_buffer[@]} - lines + 2 ))
+}
+
+save_func() {
+	[[ -z "$file_name" ]] && read -e -p 'Filename to save: ' file_name
+	printf '%s\n' "${text_buffer[@]}" > "$file_name"
+	notify "Saved file $file_name"
+	modified=false
 }
 
 help_box() {
@@ -257,6 +264,8 @@ done
 
 get_term
 setup_term
+
+[[ -z "${text_buffer[@]}" ]] && text_buffer=('' '' '')
 
 curl=0
 curc=0
