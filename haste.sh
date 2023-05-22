@@ -74,10 +74,9 @@ draw_cursor() {
 	if (( "$curc" > columns / 2 ))
 	then
 		echo -n "${temp:$(( curc - ( columns / 2 ) ))}"
-		printf '\e[0m'
+		printf '\e[0m\e7'
 		echo -n "$temp2"
-		printf '\e[K'
-		[[ -n "$temp2" ]] && printf '\e[%sD' "${#temp2}"
+		printf '\e[K\e8'
 	else
 		echo -n "$temp"
 	fi
