@@ -53,7 +53,14 @@ draw_text() {
 	do
 		[[ "$line_numbers" = true ]] && printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
 		printf '\e[K'
-		echo "${line//$'\t'/    }"
+		line="${line//$'\t'/    }"
+		if (( ${#line} > columns - 6 ))
+		then
+			echo -n "${line:0:$((columns-6))}"
+			printf '\e[7m>\e[0m\n'
+		else
+			echo "$line"
+		fi
 	done
 }
 
@@ -62,8 +69,18 @@ draw_cursor() {
 	local temp2="${text_buffer[curl]:curc}"
 	printf '\e[%sH' "$((curl - topl + 1))"
 	[[ "$line_numbers" = true ]] && printf '\e[4C'
+	temp="${temp//$'\t'/    }"
 	printf '\e[31m'
-	echo -n "${temp//$'\t'/    }"
+	if (( "$curc" > columns / 2 ))
+	then
+		echo -n "${temp:$(( curc - ( columns / 2 ) ))}"
+		printf '\e[0m'
+		echo -n "$temp2"
+		printf '\e[K'
+		[[ -n "$temp2" ]] && printf '\e[%sD' "${#temp2}"
+	else
+		echo -n "$temp"
+	fi
 	printf '\e[0m'
 }
 
@@ -121,10 +138,12 @@ backspace() {
 
 newline() {
 	text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl]:0:curc}" "${text_buffer[curl]:curc}" "${text_buffer[@]:curl+1}")
+	modified=true
 }
 
 duplicate_line() {
 	text_buffer=("${text_buffer[@]:0:$curl}" "${text_buffer[curl]}" "${text_buffer[curl]}" "${text_buffer[@]:curl+1}")
+	modified=true
 }
 
 search_for() {
@@ -262,6 +281,8 @@ open_new() {
 	else
 		notify "File $temp not found / editable"
 	fi
+	((curb+=1))
+	reload_buffer
 }
 
 help_box() {
