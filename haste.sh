@@ -62,6 +62,7 @@ draw_text() {
 			echo "$line"
 		fi
 	done
+	#printf '\e[0J'
 }
 
 draw_cursor() {
@@ -214,8 +215,7 @@ input() {
 			text_buffers[curb]="$temp"
 			meta_buffer[curb]="$curl $curc $topl $modified"
 			(( curb += 1 ))
-			(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
-			(( curb < 0 )) && (( curb = 0 ))
+			(( curb >= ${#text_buffers[@]} )) && (( curb -= 1 ))
 			reload_buffer ;;
 		$'\co') open_new ;;
 		$'\cq') close_buffer ;;
@@ -252,9 +252,7 @@ close_buffer() {
 	unset text_buffers[curb]
 	unset meta_buffers[curb]
 
-	(( curb -= 1 ))
-	(( curb >= ${#file_names[@]} )) && (( curb = 0 ))
-	(( curb < 0 )) && (( curb = 0 ))
+	(( curb = 0 ))
 
 	case "${#file_names[@]}" in
 		0) running=false ;;
@@ -417,8 +415,8 @@ notify "Welcome to haste! Press ^H to open help"
 while [[ $running == true ]];
 do
 	echo -n "$(
-	bottom_bar
 	draw_text
+	bottom_bar
 	draw_cursor
 	)"
 	input
