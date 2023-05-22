@@ -34,7 +34,7 @@ bottom_bar() {
 	else
 		base_string+=" | unmodified | "
 	fi
-	base_string+="Files: ${file_names[@]}"
+	base_string+="Files: $( printf '%s, ' ${file_names[@]})"
 	printf '\e[%sH\e[7m%-*s\e[0m' "$((lines-1))" "$columns" "$base_string"
 }
 
@@ -180,11 +180,9 @@ input() {
 			meta_buffer=("${meta_buffer[@]:0:curb}" "$curl $curc $topl $modified" "${meta_buffer[@]:curb}")
 			(( curb += 1 ))
 			(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
-			file_name="${file_names[curb]}"
-			readarray -t text_buffer <<<"${text_buffers[curb]}"
-			read -r curl curc topl modified <<<"${meta_buffer[curb]}" ;;
+			reload_buffer ;;
 		$'\co') open_new ;;
-		$'\cq') running=false ;;
+		$'\cq') close_buffer ;;
 		$'\cr') exec $0 ${args[@]} ;;
 		$'\cs') save_func ;;
 		*) notify "Unknown / Unbound key $char" ;;
@@ -196,6 +194,35 @@ input() {
 	(( topl <= 0 )) && topl=0
 }
 
+reload_buffer() {
+	file_name="${file_names[curb]}"
+	readarray -t text_buffer <<<"${text_buffers[curb]}"
+	read -r curl curc topl modified <<<"${meta_buffer[curb]}"
+}
+
+close_buffer() {
+	case "$modified" in
+		'true')
+			printf '\e[%sH' "$lines"
+			stty echo
+			read -e -p 'Save changes? (y/n) ' temp
+			stty -echo
+			case "$temp" in
+				'y'*|'Y'*) save_func ;;
+			esac ;;
+	esac
+
+	unset file_names[curb]
+	unset text_buffers[curb]
+	unset meta_buffer[curb]
+	(( curb -= 1 ))
+	(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
+	case "${#file_names[@]}" in
+		0) running=false ;;
+		*) reload_buffer ;;
+	esac
+}
+
 save_func() {
 	[[ -z "$file_name" ]] && read -e -p 'Filename to save: ' file_name
 	printf '%s\n' "${text_buffer[@]}" > "$file_name"
@@ -204,7 +231,7 @@ save_func() {
 }
 
 open_new() {
-	printf '\e[%sH' "$(( lines - 1 ))"
+	printf '\e[%sH' "$lines"
 	stty echo
 	read -e -p 'Open: ' temp
 	stty -echo
@@ -232,7 +259,7 @@ help_box() {
 
 	  Navigation
 	It can be navigated with the arrow keys
-	Press Ctrl - Q to exit
+	Press Ctrl - Q to close the current buffer, or exit if there is only one
 	Press Ctrl - S to save current buffer to file
 	Press Ctrl - H to bring up help (but you already knew that)
 	Press Ctrl - E / Alt - Right to go to end of line
