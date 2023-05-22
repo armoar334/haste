@@ -251,9 +251,11 @@ close_buffer() {
 	unset file_names[curb]
 	unset text_buffers[curb]
 	unset meta_buffers[curb]
+
 	(( curb -= 1 ))
-	(( curb > ${#file_names[@]} )) && (( curb = 0 ))
+	(( curb >= ${#file_names[@]} )) && (( curb = 0 ))
 	(( curb < 0 )) && (( curb = 0 ))
+
 	case "${#file_names[@]}" in
 		0) running=false ;;
 		*) reload_buffer ;;
@@ -277,10 +279,11 @@ open_new() {
 		return
 	elif [[ -f "$temp" ]]
 	then
-		file_names+=("$temp")
+		add_at=$(( ${#text_buffers[@]} ))
+		file_names[add_at]="$temp"
 		temp2=$(cat $temp)
-		text_buffers+=("$temp2")
-		meta_buffer+=("0 0 0 false")
+		text_buffers[add_at]="$temp2"
+		meta_buffer[add_at]="0 0 0 false"
 		(( curb = ${#text_buffers[@]} - 1 ))
 		reload_buffer
 	else
@@ -375,12 +378,13 @@ for opt in "${args[@]}"
 do
 	if [[ -f "$opt" ]];
 	then
+		add_at=$(( ${#text_buffers[@]} ))
 		# Files
-		file_names+=("$opt")
+		file_names[add_at]="$opt"
 		temp=$(cat "$opt")
-		text_buffers+=("$temp")
+		text_buffers[add_at]="$temp"
 		# Curl, Curc, topl, modified
-		meta_buffer+=("0 0 0 false")
+		meta_buffer[add_at]="0 0 0 false"
 	else
 		# Flags
 		case "$opt" in
