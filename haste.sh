@@ -27,7 +27,7 @@ restore_term() {
 }
 
 bottom_bar() {
-	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]} "
+	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]} | $curb/${#file_names[@]}"
 	if [[ $modified == true ]];
 	then
 		base_string+=" | modified | "
@@ -180,6 +180,7 @@ input() {
 			meta_buffer=("${meta_buffer[@]:0:curb}" "$curl $curc $topl $modified" "${meta_buffer[@]:curb}")
 			(( curb += 1 ))
 			(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
+			(( curb < 0 )) && (( curb = 0 ))
 			reload_buffer ;;
 		$'\co') open_new ;;
 		$'\cq') close_buffer ;;
@@ -212,11 +213,12 @@ close_buffer() {
 			esac ;;
 	esac
 
-	unset file_names[curb]
-	unset text_buffers[curb]
-	unset meta_buffer[curb]
+	file_names=("${file_names[@]:0:curb}" "${file_names[@]:curb+1}")
+	text_buffers=("${text_buffers[@]:0:curb}" "${text_buffers:0:curb}")
+	meta_buffers=("${meta_buffers[@]:0:curb}" "${meta_buffers:0:curb}")
 	(( curb -= 1 ))
 	(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
+	(( curb < 0 )) && (( curb = 0 ))
 	case "${#file_names[@]}" in
 		0) running=false ;;
 		*) reload_buffer ;;
