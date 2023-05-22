@@ -30,10 +30,11 @@ bottom_bar() {
 	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]} "
 	if [[ $modified == true ]];
 	then
-		base_string+=" | modified"
+		base_string+=" | modified | "
 	else
-		base_string+=" | unmodified"
+		base_string+=" | unmodified | "
 	fi
+	base_string+="Files: ${file_names[@]}"
 	printf '\e[%sH\e[7m%-*s\e[0m' "$((lines-1))" "$columns" "$base_string"
 }
 
@@ -58,6 +59,7 @@ draw_text() {
 
 draw_cursor() {
 	local temp="${text_buffer[curl]:0:curc}"
+	local temp2="${text_buffer[curl]:curc}"
 	printf '\e[%sH' "$((curl - topl + 1))"
 	[[ "$line_numbers" = true ]] && printf '\e[4C'
 	printf '\e[31m'
@@ -170,10 +172,17 @@ input() {
 			(( curl += 1 ))
 			line_san ;;
 		$'\ca') (( curc = 0 )) ;;
+		$'\cd') duplicate_line && (( curl += 1 )) ;;
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
-		$'\cd') duplicate_line && (( curc += 1 )) ;;
 		$'\ch') help_box 1 $(( columns / 2 )) $(( lines - 1 )) $(( columns - ( columns / 2 ) + 1 )) ;;
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
+		$'\cn')
+			meta_buffer=("${meta_buffer[@]:0:curb}" "$curl $curc $topl $modified" "${meta_buffer[@]:curb}")
+			(( curb += 1 ))
+			(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
+			file_name="${file_names[curb]}"
+			readarray -t text_buffer <<<"${text_buffers[curb]}"
+			read -r curl curc topl modified <<<"${meta_buffer[curb]}" ;;
 		$'\cq') running=false ;;
 		$'\cr') exec $0 ${args[@]} ;;
 		$'\cs') save_func ;;
@@ -281,13 +290,18 @@ line_numbers=true
 
 args=("$@")
 
+file_names=()
+text_buffers=()
+
 for opt in "${args[@]}"
 do
 	if [[ -f "$opt" ]];
 	then
 		# Files
-		file_name="$opt"
-		readarray -t text_buffer <"$opt"
+		file_names+=("$opt")
+		text_buffers+=("$(cat $opt)")
+		# Curl, Curc, topl, modified
+		meta_buffer+=("0 0 0 false")
 	else
 		# Flags
 		case "$opt" in
@@ -302,8 +316,13 @@ done
 get_term
 setup_term
 
+file_name="${file_names[0]}"
+readarray -t text_buffer <<<"${text_buffers[0]}"
+
 [[ -z "${text_buffer[@]}" ]] && text_buffer=('')
 
+# Current buffer
+curb=0
 curl=0
 curc=0
 topl=0
