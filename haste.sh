@@ -27,7 +27,7 @@ restore_term() {
 }
 
 bottom_bar() {
-	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]} | $curb/${#file_names[@]}"
+	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]}"
 	if [[ $modified == true ]];
 	then
 		base_string+=" | modified | "
@@ -127,6 +127,18 @@ duplicate_line() {
 	text_buffer=("${text_buffer[@]:0:$curl}" "${text_buffer[curl]}" "${text_buffer[curl]}" "${text_buffer[@]:curl+1}")
 }
 
+search_for() {
+	printf '\e[%sH' "$lines"
+	stty echo
+	read -e -p 'Search: ' temp
+	stty -echo
+	[[ -n "$temp" ]] && readarray -t search_locs < <(printf '%s\n' "${text_buffer[@]}" | grep -n "$temp" | cut -d':' -f1)
+	for i in "${search_locs[@]}"
+	do
+		[[ "$i" -gt $((curl+1)) ]] && curl=$((i-1)) && return
+	done
+}
+
 input() {
 	read -rsN1 char
 	case "$char" in
@@ -174,6 +186,7 @@ input() {
 		$'\ca') (( curc = 0 )) ;;
 		$'\cd') duplicate_line && (( curl += 1 )) ;;
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
+		$'\cf') search_for ;;
 		$'\ch') help_box 1 $(( columns / 2 )) $(( lines - 1 )) $(( columns - ( columns / 2 ) + 1 )) ;;
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cn')
@@ -249,13 +262,9 @@ open_new() {
 }
 
 help_box() {
-	local topl="$1"
-	local topc="$2"
-	local height="$3"
-	((height-=2))
-	local width="$4"
-	((width-=2))
-	readarray -t help_text < <(cat <<-'EOF' | fold -s -w "$width"
+	file_names+=(help)
+	meta_buffer+=("0 0 0 false")
+	temp=$(cat <<-'EOF'
 	  Welcome to haste!
 	Haste is a text editor written in (almost) pure bash
 
@@ -270,7 +279,9 @@ help_box() {
 	Press Ctrl - K to delete line
 	Press Ctrl - N to switch to the next buffer
 	Press Ctrl - O to open a new file
+	Press Ctrl - F to search (and leave empty to jump to next of previous search)
 	Press Ctrl - R to reload the script (mostly just a development thing, mostly just for me)
+
 
 	  Command mode
 	This is where the benefits of being written in bash begin to outweigh the negatives
@@ -290,18 +301,9 @@ help_box() {
 
 	EOF
 	)
-	printf '\e[%s;%sH\e[7m+%*s+\e[0m\n' "$topl" "$topc" "$width" '' | tr ' ' '-'
-	for index in $(seq 0 $height)
-	do
-		[[ "${help_text[index]+abc}" ]] && line="${help_text[index]}" || line=''
-		printf '\e[%sC\e[7m|\e[0m%-*s\e[7m|\e[0m\n' "$((topc-1))" "$width" " $line"
-	done
-	printf '\e[%s;%sH\e[7m+%*s+\e[0m' "$((topl+height+1))" "$topc" "$width" 'Press any key to close '
-	read -rsn1 char
-	case "$char" in
-		$'\e')
-			read -rsN5 -t 0.001 _
-	esac
+	text_buffers+=("$temp")
+	((curb+=1))
+	reload_buffer
 }
 
 command_mode() {
@@ -324,6 +326,7 @@ command_mode() {
 			clear
 			printf '%s\n' "${text_buffer[@]}"
 			text_buffer=("${temp[@]}") ;;
+		*) eval "${temp[@]}" ;;
 	esac
 	stty -echo
 }
