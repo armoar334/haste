@@ -256,7 +256,8 @@ open_new() {
 	if [[ -f "$temp" ]]
 	then
 		file_names+=("$temp")
-		text_buffers+=("$(cat $temp)")
+		temp2=$(cat "$temp")
+		text_buffers+=("$temp2")
 		meta_buffer+=("0 0 0 false")
 	else
 		notify "File $temp not found / editable"
@@ -352,7 +353,8 @@ do
 	then
 		# Files
 		file_names+=("$opt")
-		text_buffers+=("$(cat $opt)")
+		temp=$(cat "$opt")
+		text_buffers+=("$temp")
 		# Curl, Curc, topl, modified
 		meta_buffer+=("0 0 0 false")
 	else
