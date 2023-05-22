@@ -183,6 +183,7 @@ input() {
 			file_name="${file_names[curb]}"
 			readarray -t text_buffer <<<"${text_buffers[curb]}"
 			read -r curl curc topl modified <<<"${meta_buffer[curb]}" ;;
+		$'\co') open_new ;;
 		$'\cq') running=false ;;
 		$'\cr') exec $0 ${args[@]} ;;
 		$'\cs') save_func ;;
@@ -200,6 +201,22 @@ save_func() {
 	printf '%s\n' "${text_buffer[@]}" > "$file_name"
 	notify "Saved file $file_name"
 	modified=false
+}
+
+open_new() {
+	printf '\e[%sH' "$(( lines - 1 ))"
+	stty echo
+	read -e -p 'Open: ' temp
+	stty -echo
+	[[ -z "$temp" ]] && return
+	if [[ -f "$temp" ]]
+	then
+		file_names+=("$temp")
+		text_buffers+=("$(cat $temp)")
+		meta_buffer+=("0 0 0 false")
+	else
+		notify "File $temp not found / editable"
+	fi
 }
 
 help_box() {
@@ -222,6 +239,8 @@ help_box() {
 	Press Ctrl - A / Alt - Left to go to start of line
 	Press Ctrl - D to duplicate line
 	Press Ctrl - K to delete line
+	Press Ctrl - N to switch to the next buffer
+	Press Ctrl - O to open a new file
 	Press Ctrl - R to reload the script (mostly just a development thing, mostly just for me)
 
 	  Command mode
