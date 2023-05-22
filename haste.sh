@@ -27,7 +27,7 @@ restore_term() {
 }
 
 bottom_bar() {
-	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]}"
+	local base_string=" haste v$HASTE_VERSION | $file_name $((curl+1))/${#text_buffer[@]} | $((curb+1))/${#text_buffers[@]}"
 	if [[ $modified == true ]];
 	then
 		base_string+=" | modified | "
@@ -54,7 +54,7 @@ draw_text() {
 		[[ "$line_numbers" = true ]] && printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
 		printf '\e[K'
 		line="${line//$'\t'/    }"
-		if (( ${#line} > columns - 6 ))
+		if (( ${#line} > columns - 5 ))
 		then
 			echo -n "${line:0:$((columns-6))}"
 			printf '\e[7m>\e[0m\n'
@@ -211,8 +211,8 @@ input() {
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cn')
 			temp=$(printf '%s\n' "${text_buffer[@]}")
-			text_buffers=("${text_buffers[@]:0:curb}" "$temp" "${text_buffers[@]:curb+1}")
-			meta_buffer=("${meta_buffer[@]:0:curb}" "$curl $curc $topl $modified" "${meta_buffer[@]:curb+1}")
+			text_buffers[curb]="$temp"
+			meta_buffer[curb]="$curl $curc $topl $modified"
 			(( curb += 1 ))
 			(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
 			(( curb < 0 )) && (( curb = 0 ))
@@ -248,9 +248,9 @@ close_buffer() {
 			esac ;;
 	esac
 
-	file_names=("${file_names[@]:0:curb}" "${file_names[@]:curb+1}")
-	text_buffers=("${text_buffers[@]:0:curb}" "${text_buffers:0:curb}")
-	meta_buffers=("${meta_buffers[@]:0:curb}" "${meta_buffers:0:curb}")
+	unset file_names[curb]
+	unset text_buffers[curb]
+	unset meta_buffers[curb]
 	(( curb -= 1 ))
 	(( curb > ${#file_names[@]} )) && (( curb = 0 ))
 	(( curb < 0 )) && (( curb = 0 ))
@@ -272,14 +272,16 @@ open_new() {
 	stty echo
 	read -e -p 'Open: ' temp
 	stty -echo
-	[[ -z "$temp" ]] && return
-	if [[ -f "$temp" ]]
+	if [[ -z "$temp" ]]
+	then
+		return
+	elif [[ -f "$temp" ]]
 	then
 		file_names+=("$temp")
 		temp2=$(cat $temp)
 		text_buffers+=("$temp2")
 		meta_buffer+=("0 0 0 false")
-		((curb+=1))
+		(( curb = ${#text_buffers[@]} - 1 ))
 		reload_buffer
 	else
 		notify "File $temp not found / editable"
@@ -327,8 +329,8 @@ help_box() {
 	EOF
 	)
 	text_buffers+=("$temp")
-	#((curb+=1))
-	#reload_buffer
+	(( curb = ${#text_buffers[@]} - 1 ))
+	reload_buffer
 }
 
 command_mode() {
@@ -407,7 +409,7 @@ modified=false
 line_numbers=true
 
 running=true
-notify "Welcome to haste! Press ^H to open the help buffer"
+notify "Welcome to haste! Press ^H to open help"
 while [[ $running == true ]];
 do
 	echo -n "$(
