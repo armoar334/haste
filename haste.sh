@@ -274,14 +274,14 @@ open_new() {
 	if [[ -f "$temp" ]]
 	then
 		file_names+=("$temp")
-		temp2=$(cat "$temp")
+		temp2=$(cat $temp)
 		text_buffers+=("$temp2")
 		meta_buffer+=("0 0 0 false")
+		((curb+=1))
+		reload_buffer
 	else
 		notify "File $temp not found / editable"
 	fi
-	((curb+=1))
-	reload_buffer
 }
 
 help_box() {
