@@ -210,7 +210,9 @@ input() {
 		$'\ch') help_box 1 $(( columns / 2 )) $(( lines - 1 )) $(( columns - ( columns / 2 ) + 1 )) ;;
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cn')
-			meta_buffer=("${meta_buffer[@]:0:curb}" "$curl $curc $topl $modified" "${meta_buffer[@]:curb}")
+			temp=$(printf '%s\n' "${text_buffer[@]}")
+			text_buffers=("${text_buffers[@]:0:curb}" "$temp" "${text_buffers[@]:curb+1}")
+			meta_buffer=("${meta_buffer[@]:0:curb}" "$curl $curc $topl $modified" "${meta_buffer[@]:curb+1}")
 			(( curb += 1 ))
 			(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
 			(( curb < 0 )) && (( curb = 0 ))
@@ -250,7 +252,7 @@ close_buffer() {
 	text_buffers=("${text_buffers[@]:0:curb}" "${text_buffers:0:curb}")
 	meta_buffers=("${meta_buffers[@]:0:curb}" "${meta_buffers:0:curb}")
 	(( curb -= 1 ))
-	(( curb > ${#file_names[@]} - 1 )) && (( curb = 0 ))
+	(( curb > ${#file_names[@]} )) && (( curb = 0 ))
 	(( curb < 0 )) && (( curb = 0 ))
 	case "${#file_names[@]}" in
 		0) running=false ;;
