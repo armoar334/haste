@@ -71,7 +71,7 @@ draw_cursor() {
 	[[ "$line_numbers" = true ]] && printf '\e[4C'
 	temp="${temp//$'\t'/    }"
 	printf '\e[31m'
-	if (( "$curc" > columns / 2 ))
+	if (( "$curc" > columns / 2 )) && (( ${#text_buffer[curl]} > columns - 6 ))
 	then
 		echo -n "${temp:$(( curc - ( columns / 2 ) ))}"
 		printf '\e[0m\e7'
@@ -325,8 +325,8 @@ help_box() {
 	EOF
 	)
 	text_buffers+=("$temp")
-	((curb+=1))
-	reload_buffer
+	#((curb+=1))
+	#reload_buffer
 }
 
 command_mode() {
@@ -405,7 +405,7 @@ modified=false
 line_numbers=true
 
 running=true
-notify "Welcome to haste! Press ^H for help"
+notify "Welcome to haste! Press ^H to open the help buffer"
 while [[ $running == true ]];
 do
 	echo -n "$(
