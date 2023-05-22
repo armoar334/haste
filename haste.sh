@@ -137,6 +137,8 @@ search_for() {
 	do
 		[[ "$i" -gt $((curl+1)) ]] && curl=$((i-1)) && return
 	done
+	[[ -n "${search_locs[@]}" ]] && curl="$(( ${search_locs[0]} - 1 ))"
+	scroll
 }
 
 input() {
