@@ -14,7 +14,7 @@ I think however, that the issues are far outweighed by the positives. The bash s
 
 ## Features
  - Multiple buffers
- - Mouse addressing
+ - Mouse addressing using xterm sequences
  - Fully supported bash parameter expansion for text editing
  - Few dependencies (bash, grep, cut) and NO GNU-ISMS! (apart from bash obvs)
 
