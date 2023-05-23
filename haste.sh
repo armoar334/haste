@@ -184,7 +184,10 @@ search_for() {
 	stty echo
 	read -e -p 'Search: ' temp
 	stty -echo
-	[[ -n "$temp" ]] && readarray -t search_locs < <(printf '%s\n' "${text_buffer[@]}" | grep -n "$temp" | cut -d':' -f1)
+	if [[ -n "$temp" ]]
+	then
+		readarray -t search_locs < <(printf '%s\n' "${text_buffer[@]}" | grep -n "$temp" | cut -d':' -f1)
+	fi
 	for i in "${search_locs[@]}"
 	do
 		[[ "$i" -gt $((curl+1)) ]] && curl=$((i-1)) && return
@@ -413,6 +416,7 @@ help_box() {
 	You should now be in a prompt at the bottom of your terminal
 	You now have two options:
 	 - Press escape again... the story ends, you go back to your text editor and believe whatever you want to believe.
+
 	 - Enter one of the following commands, and you see how deep the rabbithole goes...
 	  Interface
 	   line_numbers=[true/false]: set linenumbers on or off
@@ -422,6 +426,8 @@ help_box() {
 	   buffer: run the specified parameter expansion on the whole buffer
 	   line and buffer both take arguments in the form of bash parameter expansions, such as '//a/A' or '##a'. See [https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html] for further detail. 
 	   This is useful for testing things such as testing PS1 variables (@P) without opening a whole extra bash session
+
+
 
 	EOF
 	)
@@ -440,12 +446,12 @@ command_mode() {
 		'line_numbers='*|'scroll_margin='*)
 			eval "$temp" ;;
 		'line'*)
-			temp="$(echo $temp | cut -d' ' -f2-)"
+			IFS=' ' read -r _ temp <<<"$temp"
 			temp_2="${text_buffer[$curl]}"
 			eval 'temp=${temp_2'"$temp"'}' 2>&1
 			text_buffer=("${text_buffer[@]:0:$curl}" "$temp" "${text_buffer[@]:$((curl+1))}") ;;
 		'buffer'*)
-			temp="$(echo $temp | cut -d' ' -f2-)"
+			IFS=' ' read -r _ temp <<<"$temp"
 			eval 'temp=("${text_buffer[@]'"$temp"'}")' 2>&1
 			clear
 			printf '%s\n' "${text_buffer[@]}"
@@ -483,9 +489,9 @@ do
 		# Flags
 		case "$opt" in
 			'--scroll_margin='*)
-				temp=$(<<<"$opt" cut -d'=' -f2)
+				temp="${opt:16}"
 				# Canonising as a number is one way to check
-				((temp)) && scroll_margin="$temp" ;;
+				[[ $temp -ge 0 ]] && scroll_margin="$temp" ;;
 		esac
 	fi
 done
