@@ -450,7 +450,7 @@ command_mode() {
 			clear
 			printf '%s\n' "${text_buffer[@]}"
 			text_buffer=("${temp[@]}") ;;
-		*) eval "${temp[@]}" ;;
+		*) notify "Unknown command to \"${temp[@]}\"" ;;
 	esac
 	stty -echo
 }
