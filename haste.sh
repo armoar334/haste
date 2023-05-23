@@ -9,14 +9,16 @@ get_term() {
 	IFS='[;' read -sp $'\e7\e[9999;9999H\e[6n\e8' -d R -rs _ lines columns
 }
 
-setup_mouse() {
-	# Xterm / compatible only
-	printf '\e[%s;%s;%s;%s;%sT' 1 1 1 1 $(( lines - 2 ))
-}
-
 setup_term() {
 	read -r default_settings < <(stty -g)
-	printf '\e[?1049h'
+
+	printf '\e[?1049h'  # Switch buffer
+
+	# Xterm mouse
+	printf '\e[?1000h'  # Mouse
+	printf '\e[?1015h'  # Mouse
+	printf '\e[?1006h'  # Mouse
+
 	printf '\e[?2004h'  # Bracketed paste
 	printf '\e[?7l'     # Disable line wrapping
 	#printf '\e[?25l'   # Hide cursor
@@ -29,6 +31,9 @@ setup_term() {
 
 restore_term() {
 	printf '\e[?1049l'
+	printf '\e[?1000l'  # Mouse
+	printf '\e[?1015l'  # Mouse
+	printf '\e[?1006l'  # Mouse
 	printf '\e]0;%s' "$TERM" # Window title
 	stty "$default_settings"
 }
@@ -224,6 +229,44 @@ input() {
 					((curc+=1)) ;;
 				'[D')
 					((curc-=1)) ;;
+				'[<64;')
+					(( curl -= 1 ))
+					until [[ "$char" == 'M' ]]
+					do
+						read -rsN1 char
+					done ;; # Mouse wheel up
+				'[<65;')
+					(( curl += 1 ))
+					until [[ "$char" == 'M' ]]
+					do
+						read -rsN1 char
+					done ;; # Mouse wheel down
+				'[<0;'*)
+					mouse_proc=''
+					temp="$char"
+					until [[ "$char" == 'M' ]] || [[ "$char" == 'm' ]]
+					do
+						read -rsN1 char
+						mouse_proc+="$char"
+					done
+					if [[ "$char" == 'M' ]] # m is mouseup, so discard
+					then
+						IFS=';' read -d "$char" _ mx my <<<"$temp$mouse_proc"
+						(( curl = topl + my - 1 ))
+
+						temp="${text_buffer[curl]}"
+						temp="${temp//[^	]/}"
+						(( mx -= 5 )) # Account for line numbers
+						for (( i=0; i<${#temp}; i++ ))
+						do
+							(( mx -= 3 )) # account for tabs
+						done
+						(( mx < 0 )) && (( mx = 0 ))
+						#notify "Mouse X: $mx :${#temp}:"
+						(( curc = mx ))
+						(( curc >= ${#text_buffer[curl]} )) && (( curc = ${#text_buffer[curl]} - 1 ))
+						line_san
+					fi ;; # Mouse click
 				'') command_mode ;;
 				*) notify "Unkown / Unbound escape $char" ;;
 			esac ;;
