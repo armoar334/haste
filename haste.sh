@@ -224,6 +224,8 @@ input() {
 					((curl+=1)) ;; # Alt + down
 				'[1;3C') ((curc=${#text_buffer[curl]})) ;; # Alt + right
 				'[1;3D') ((curc=0)) ;; # Alt + left
+				'[F') ((curc=${#text_buffer[curl]})) ;; # End
+				'[H') ((curc=0)) ;; # Home
 				'[3~')
 					(( curc += 1 ))
 					column_san
