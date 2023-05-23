@@ -12,6 +12,12 @@ This specific version started life as a nano clone called board (nano > planck (
 You may be thinking that a text editor written in bash is a bad idea. bash is notoriously slow, and having to use VT100 specific escapes instead of a termcap / curses based enviroment makes it less portable (although admiteddly this isnt a huge issue,since its not the 1980's anymore)  
 I think however, that the issues are far outweighed by the positives. The bash syntax for parameter expansions is (imo) a brillaint way to do command based editing  
 
+## Features
+ - Multiple buffers
+ - Mouse addressing
+ - Fully supported bash parameter expansion for text editing
+ - Few dependencies (bash, grep, cut) and NO GNU-ISMS! (apart from bash obvs)
+
 ## Roadmap / future features
  - Syntax highlighting:  
 	This is a little difficult in bash, as there is not great support for extended regexes that would be useful fo this sort of job
