@@ -122,6 +122,26 @@ insert_char() {
 	modified=true
 }
 
+bracketed_paste() {
+	read -rs -d $'\e[201~' temp 
+	read -rsN5 _
+	for (( i=0; i<${#temp}; i++ ))
+	do
+		char="${temp:$i:1}"
+		case "$char" in
+			[[:print:]]|$'\t')
+				insert_char "$char"
+				((curc+=1))
+				column_san ;;
+			$'\n')
+				newline
+				(( curc = 0 ))
+				(( curl += 1 ))
+				line_san ;;
+		esac
+	done
+}
+
 backspace() {
 	if (( curc >= 1 ));
 	then
@@ -172,6 +192,7 @@ input() {
 		$'\e')
 			read -rsN5 -t 0.001 char
 			case "$char" in
+				'[200~') bracketed_paste ;;
 				'[1;3A')
 					text_buffer=("${text_buffer[@]:0:curl-1}" "${text_buffer[curl]}" "${text_buffer[curl-1]}" "${text_buffer[@]:curl+1}")
 					((curl-=1)) ;; # Alt + up
@@ -205,6 +226,13 @@ input() {
 			(( curl += 1 ))
 			line_san ;;
 		$'\ca') (( curc = 0 )) ;;
+		$'\cb')
+			temp=$(printf '%s\n' "${text_buffer[@]}")
+			text_buffers[curb]="$temp"
+			meta_buffer[curb]="$curl $curc $topl $modified"
+			(( curb -= 1 ))
+			(( curb < 0 )) && (( curb += 1 ))
+			reload_buffer ;;			
 		$'\cd') duplicate_line && (( curl += 1 )) ;;
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
 		$'\cf') search_for ;;
@@ -261,7 +289,13 @@ close_buffer() {
 }
 
 save_func() {
-	[[ -z "$file_name" ]] && read -e -p 'Filename to save: ' file_name
+	if [[ -z "$file_name" ]]
+	then
+		printf '\e[%sH' "$lines"
+		stty echo
+		read -e -p 'Filename to save: ' file_name
+		stty -echo
+	fi
 	printf '%s\n' "${text_buffer[@]}" > "$file_name"
 	notify "Saved file $file_name"
 	modified=false
@@ -305,8 +339,9 @@ help_box() {
 	Press Ctrl - A / Alt - Left to go to start of line
 	Press Ctrl - D to duplicate line
 	Press Ctrl - K to delete line
-	Press Ctrl - N to switch to the next buffer
 	Press Ctrl - O to open a new file
+	Press Ctrl - N to switch to the next buffer
+	Press Ctrl - B to switch to the previous buffer
 	Press Ctrl - F to search (and leave empty to jump to next of previous search)
 	Press Ctrl - R to reload the script (mostly just a development thing, mostly just for me)
 
