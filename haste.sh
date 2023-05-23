@@ -267,6 +267,16 @@ input() {
 						(( curc >= ${#text_buffer[curl]} )) && (( curc = ${#text_buffer[curl]} - 1 ))
 						line_san
 					fi ;; # Mouse click
+				'[<2'*)
+					until [[ "$char" == 'M' ]] || [[ "$char" == 'm' ]]
+					do
+						read -rsN1 char
+					done ;; # Discard right click
+				'[<3'*)
+					until [[ "$char" == 'M' ]] || [[ "$char" == 'm' ]]
+					do
+						read -rsN1 char
+					done ;; # Discard middle click
 				'') command_mode ;;
 				*) notify "Unkown / Unbound escape $char" ;;
 			esac ;;
