@@ -9,12 +9,18 @@ get_term() {
 	IFS='[;' read -sp $'\e7\e[9999;9999H\e[6n\e8' -d R -rs _ lines columns
 }
 
+setup_mouse() {
+	# Xterm / compatible only
+	printf '\e[%s;%s;%s;%s;%sT' 1 1 1 1 $(( lines - 2 ))
+}
+
 setup_term() {
 	read -r default_settings < <(stty -g)
 	printf '\e[?1049h'
-	printf '\e[?2004h' # Bracketed paste
-	printf '\e[?7l'    # Disable line wrapping
-	#printf '\e[?25l'  # Hide cursor
+	printf '\e[?2004h'  # Bracketed paste
+	printf '\e[?7l'     # Disable line wrapping
+	#printf '\e[?25l'   # Hide cursor
+	printf '\e]0;haste' # Window title
 	clear
 	stty -ixon # Disable XON/XOFF
 	stty -echo # Dont echo user input
@@ -23,6 +29,7 @@ setup_term() {
 
 restore_term() {
 	printf '\e[?1049l'
+	printf '\e]0;%s' "$TERM" # Window title
 	stty "$default_settings"
 }
 
@@ -145,7 +152,7 @@ bracketed_paste() {
 backspace() {
 	if (( curc >= 1 ));
 	then
-		text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[curl]:0:curc-1}${text_buffer[curl]:curc}" "${text_buffer[@]:curl+1}")
+		text_buffer[curl]="${text_buffer[curl]:0:curc-1}${text_buffer[curl]:curc}"
 		((curc-=1))
 	elif (( curl > 0 ))
 	then
@@ -218,7 +225,7 @@ input() {
 				'[D')
 					((curc-=1)) ;;
 				'') command_mode ;;
-				*) ;;
+				*) notify "Unkown / Unbound escape $char" ;;
 			esac ;;
 		$'\n')
 			newline
