@@ -16,7 +16,7 @@ I think however, that the issues are far outweighed by the positives. The bash s
  - Multiple buffers
  - Mouse addressing using xterm sequences
  - Fully supported bash parameter expansion for text editing
- - Few dependencies (bash, grep, cut) and NO GNU-ISMS! (apart from bash obvs)
+ - Pure bash, no external dependencies (even coreutils)
 
 ## Roadmap / future features
  - Syntax highlighting:  
