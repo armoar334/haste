@@ -16,7 +16,7 @@ setup_term() {
 	printf '\e[?1049h'  # Switch buffer
 
 	# Xterm mouse
-	printf '\e[?1000h'  # Mouse
+	printf '\e[?1000h'  # Report on click
 	printf '\e[?1015h'  # Mouse
 	printf '\e[?1006h'  # Mouse
 
@@ -186,7 +186,14 @@ search_for() {
 	stty -echo
 	if [[ -n "$temp" ]]
 	then
-		readarray -t search_locs < <(printf '%s\n' "${text_buffer[@]}" | grep -n "$temp" | cut -d':' -f1)
+		count=1
+		search_locs=()
+		for i in "${text_buffer[@]}"
+		do
+			[[ "$i" == *"$temp"* ]] && search_locs+=("$count")
+			((count++))
+		done
+		[[ "${#search_locs[@]}" -le 0 ]] && notify "Phrase \"$temp\" not found"
 	fi
 	for i in "${search_locs[@]}"
 	do
