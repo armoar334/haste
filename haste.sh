@@ -2,7 +2,8 @@
 
 HASTE_VERSION=0.1
 
-trap 'get_term' WINCH
+# This causes weird errors for some reason. I recommend just saving and Ctrl - R'ing
+#trap 'get_term' WINCH 
 #trap 'notify Error: $LINENO' ERR
 
 get_term() {
@@ -264,7 +265,7 @@ input() {
 						(( mx < 0 )) && (( mx = 0 ))
 						#notify "Mouse X: $mx :${#temp}:"
 						(( curc = mx ))
-						(( curc >= ${#text_buffer[curl]} )) && (( curc = ${#text_buffer[curl]} - 1 ))
+						(( curc >= ${#text_buffer[curl]} )) && (( curc = ${#text_buffer[curl]} ))
 						line_san
 					fi ;; # Mouse click
 				'[<2'*)
