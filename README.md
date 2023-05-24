@@ -10,6 +10,7 @@ This specific version started life as a nano clone called board (nano > planck (
 
 ## Why?
 You may be thinking that a text editor written in bash is a bad idea. bash is notoriously slow, and having to use VT100 specific escapes instead of a termcap / curses based enviroment makes it less portable (although admiteddly this isnt a huge issue,since its not the 1980's anymore)  
+Some of this is ill-informed; bash _itself_ is reasonably fast, its just not an especially quick glue. 
 I think however, that the issues are far outweighed by the positives. The bash syntax for parameter expansions is (imo) a brillaint way to do command based editing  
 
 ## Features

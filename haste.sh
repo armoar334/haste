@@ -3,7 +3,7 @@
 HASTE_VERSION=0.1
 
 # This causes weird errors for some reason. I recommend just saving and Ctrl - R'ing
-#trap 'get_term' WINCH 
+#trap 'get_term' WINCH
 #trap 'notify Error: $LINENO' ERR
 
 get_term() {
@@ -208,7 +208,18 @@ input() {
 	case "$char" in
 		[[:print:]]|$'\t')
 			#notify "Keypress: $char"
-			insert_char "$char"
+			case "$char" in
+			'"'|"'")
+				insert_char "$char$char" ;;
+			'[')
+				insert_char '[]' ;;
+			'(')
+				insert_char '()' ;;
+			'{')
+				insert_char '{}' ;;
+			*)
+				insert_char "$char" ;;
+			esac
 			((curc+=1)) ;;
 		$'\c?')
 			backspace ;;
@@ -224,6 +235,14 @@ input() {
 					((curl+=1)) ;; # Alt + down
 				'[1;3C') ((curc=${#text_buffer[curl]})) ;; # Alt + right
 				'[1;3D') ((curc=0)) ;; # Alt + left
+				'[1;5C') 
+					temp="${text_buffer[curl]:curc+1}"
+					temp="${temp#*[^[:alnum:]]}"
+					(( curc = ${#text_buffer[curl]} - ${#temp} ));; # Ctrl - right
+				'[1;5D')
+					temp="${text_buffer[curl]:0:curc}"
+					temp="${temp%[^[:alnum:]]*}"
+					(( curc = ${#temp} ));; # Ctrl - left
 				'[F') ((curc=${#text_buffer[curl]})) ;; # End
 				'[H') ((curc=0)) ;; # Home
 				'[3~')
@@ -402,6 +421,7 @@ help_box() {
 
 	  Navigation
 	It can be navigated with the arrow keys
+	Press Ctrl - Left / Right to jump words
 	Press Ctrl - Q to close the current buffer, or exit if there is only one
 	Press Ctrl - S to save current buffer to file
 	Press Ctrl - H to bring up help (but you already knew that)
