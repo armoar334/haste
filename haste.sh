@@ -348,7 +348,7 @@ close_buffer() {
 	unset text_buffers[curb]
 	unset meta_buffers[curb]
 
-	(( curb = 0 ))
+	(( curb = ${#text_buffers[@]} ))
 
 	case "${#file_names[@]}" in
 		0) running=false ;;
