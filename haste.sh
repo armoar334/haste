@@ -238,7 +238,7 @@ input() {
 				'[1;5C') 
 					temp="${text_buffer[curl]:curc+1}"
 					temp="${temp#*[^[:alnum:]]}"
-					(( curc = ${#text_buffer[curl]} - ${#temp} ));; # Ctrl - right
+					(( curc = ${#text_buffer[curl]} - ${#temp} - 1 ));; # Ctrl - right
 				'[1;5D')
 					temp="${text_buffer[curl]:0:curc}"
 					temp="${temp%[^[:alnum:]]*}"
