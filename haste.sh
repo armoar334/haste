@@ -17,8 +17,8 @@ setup_term() {
 
 	# Xterm mouse
 	printf '\e[?1000h'  # Report on click
-	printf '\e[?1015h'  # Mouse
-	printf '\e[?1006h'  # Mouse
+	printf '\e[?1006h'  # Legacy Mouse
+	printf '\e[?1015h'  # Modern Mouse
 
 	printf '\e[?2004h'  # Bracketed paste
 	printf '\e[?7l'     # Disable line wrapping
@@ -280,11 +280,13 @@ input() {
 						(( curc >= ${#text_buffer[curl]} )) && (( curc = ${#text_buffer[curl]} ))
 						line_san
 					fi ;; # Mouse click
-				'[<2;'*|'[<3;'*|'[<1;'*)
+				'[<'[0-9]';'*)
+					temp="$char"
 					until [[ "$char" == 'M' ]] || [[ "$char" == 'm' ]]
 					do
 						read -rsN1 char
-					done ;; # Discard middle click
+					done
+					notify "Unkown / Unbound escape $temp" ;; # Discard middle click
 				'') command_mode ;;
 				*) notify "Unkown / Unbound escape $char" ;;
 			esac ;;
