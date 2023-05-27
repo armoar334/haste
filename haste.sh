@@ -14,6 +14,7 @@ setup_term() {
 	read -r default_settings < <(stty -g)
 
 	printf '\e[?1049h'  # Switch buffer
+	printf '\e[22t'     # Save window name + icon
 
 	# Xterm mouse
 	printf '\e[?1000h'  # Report on click
@@ -35,7 +36,8 @@ restore_term() {
 	printf '\e[?1000l'  # Mouse
 	printf '\e[?1015l'  # Mouse
 	printf '\e[?1006l'  # Mouse
-	printf '\e]0;%s' "$TERM" # Window title
+	printf '\e[23t'     # Save window name + icon
+	#printf '\e]0;%s' "$TERM" # Window title
 	stty "$default_settings"
 }
 
