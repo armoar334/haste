@@ -299,7 +299,7 @@ input() {
 						(( curc >= ${#text_buffer[curl]} )) && (( curc = ${#text_buffer[curl]} ))
 						line_san
 					fi ;; # Mouse click
-				'[<'[0-9]';'*)
+				'[<'*';'*)
 					temp="$char"
 					until [[ "$char" == 'M' ]] || [[ "$char" == 'm' ]]
 					do
@@ -315,13 +315,6 @@ input() {
 			(( curl += 1 ))
 			line_san ;;
 		$'\ca') (( curc = 0 )) ;;
-		$'\cb')
-			temp=$(printf '%s\n' "${text_buffer[@]}")
-			text_buffers[curb]="$temp"
-			meta_buffer[curb]="$curl $curc $topl $modified"
-			(( curb -= 1 ))
-			(( curb < 0 )) && (( curb += 1 ))
-			reload_buffer ;;			
 		$'\cd') duplicate_line && (( curl += 1 )) ;;
 		$'\ce') (( curc = ${#text_buffer[curl]} )) ;;
 		$'\cf') search_for ;;
@@ -332,7 +325,7 @@ input() {
 			text_buffers[curb]="$temp"
 			meta_buffer[curb]="$curl $curc $topl $modified"
 			(( curb += 1 ))
-			(( curb >= ${#text_buffers[@]} )) && (( curb -= 1 ))
+			(( curb >= ${#text_buffers[@]} )) && (( curb = 0 ))
 			reload_buffer ;;
 		$'\co') open_new ;;
 		$'\cq') close_buffer ;;
@@ -369,7 +362,26 @@ close_buffer() {
 	unset text_buffers[curb]
 	unset meta_buffers[curb]
 
-	(( curb = ${#text_buffers[@]} ))
+	# Rebuild arrays so no gaps
+	for i in "${!file_names[@]}"; do
+    	new_array+=( "${file_names[i]}" )
+	done
+	file_names=("${new_array[@]}")
+	unset new_array
+
+	for i in "${!text_buffers[@]}"; do
+    	new_array+=( "${text_buffers[i]}" )
+	done
+	text_buffers=("${new_array[@]}")
+	unset new_array
+
+	for i in "${!meta_buffers[@]}"; do
+    	new_array+=( "${meta_buffers[i]}" )
+	done
+	meta_buffers=("${new_array[@]}")
+	unset new_array
+
+	(( curb = ${#text_buffers[@]} - 1 ))
 
 	case "${#file_names[@]}" in
 		0) running=false ;;
@@ -431,7 +443,6 @@ help_box() {
 	Press Ctrl - K to delete line
 	Press Ctrl - O to open a new file
 	Press Ctrl - N to switch to the next buffer
-	Press Ctrl - B to switch to the previous buffer
 	Press Ctrl - F to search (and leave empty to jump to next of previous search)
 	Press Ctrl - R to reload the script (mostly just a development thing, mostly just for me)
 
