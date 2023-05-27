@@ -381,7 +381,8 @@ close_buffer() {
 	meta_buffers=("${new_array[@]}")
 	unset new_array
 
-	(( curb = ${#text_buffers[@]} - 1 ))
+	(( curb -= 1 ))
+	(( curb < 0 )) && (( curb = 0 ))
 
 	case "${#file_names[@]}" in
 		0) running=false ;;
