@@ -430,7 +430,7 @@ open_new() {
 help_box() {
 	file_names+=(help)
 	meta_buffer+=("0 0 0 false")
-	temp=$(cat <<-'EOF'
+	IFS= read -r -d '' temp <<-'EOF'
 	  Welcome to haste!
 	Haste is a text editor written in (almost) pure bash
 
@@ -464,13 +464,10 @@ help_box() {
 	  Text editing
 	   line: run the specified parameter expansion on the current line only
 	   buffer: run the specified parameter expansion on the whole buffer
-	   line and buffer both take arguments in the form of bash parameter expansions, such as '//a/A' or '##a'. See [https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html] for further detail. 
+	   line and buffer both take arguments in the form of bash parameter expansions, such as '//a/A' or '##a*'. See [https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html] for further detail. 
 	   This is useful for testing things such as testing PS1 variables (@P) without opening a whole extra bash session
 
-
-
 	EOF
-	)
 	text_buffers+=("$temp")
 	(( curb = ${#text_buffers[@]} - 1 ))
 	reload_buffer
