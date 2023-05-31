@@ -7,7 +7,10 @@ HASTE_VERSION=0.1
 #trap 'notify Error: $LINENO' ERR
 
 get_term() {
-	IFS='[;' read -sp $'\e7\e[9999;9999H\e[6n\e8' -d R -rs _ lines columns
+	#IFS='[;' read -sp $'\e7\e[9999;9999H\e[6n\e8' -d R -rs _ lines columns
+	shopt -s checkwinsize; (:;:)
+	lines="$LINES"
+	columns="$COLUMNS"
 }
 
 setup_term() {
