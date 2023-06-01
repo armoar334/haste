@@ -3,7 +3,7 @@
 HASTE_VERSION=0.1
 
 # This causes weird errors for some reason. I recommend just saving and Ctrl - R'ing
-#trap 'get_term' WINCH
+trap 'get_term' WINCH
 #trap 'notify Error: $LINENO' ERR
 
 get_term() {
