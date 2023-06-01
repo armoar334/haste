@@ -334,7 +334,8 @@ input() {
 		$'\ch') help_box 1 $(( columns / 2 )) $(( lines - 1 )) $(( columns - ( columns / 2 ) + 1 )) ;;
 		$'\ck') text_buffer=("${text_buffer[@]:0:curl}" "${text_buffer[@]:curl+1}") ;;
 		$'\cn')
-			temp=$(printf '%s\n' "${text_buffer[@]}")
+			#temp=$(printf '%s\n' "${text_buffer[@]}")
+			IFS= read -d '' -r temp <<< $(printf '%s\n' "${text_buffer[@]}")
 			text_buffers[curb]="$temp"
 			meta_buffer[curb]="$curl $curc $topl $modified"
 			(( curb += 1 ))
@@ -573,3 +574,4 @@ do
 done
 
 restore_term
+
