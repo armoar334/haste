@@ -434,8 +434,17 @@ open_new() {
 		meta_buffer[add_at]="0 0 0 false"
 		(( curb = ${#text_buffers[@]} - 1 ))
 		reload_buffer
+	elif [[ -e "$temp" ]]
+	then
+		notify "File $temp found, but not editable"
 	else
-		notify "File $temp not found / editable"
+		notify "File $temp not found, will be created upon save"
+		add_at=$(( ${#text_buffers[@]} ))
+		file_names[add_at]="$temp"
+		text_buffers[add_at]=""
+		meta_buffer[add_at]="0 0 0 false"
+		(( curb = ${#text_buffers[@]} - 1 ))
+		reload_buffer
 	fi
 }
 
@@ -574,4 +583,3 @@ do
 done
 
 restore_term
-
