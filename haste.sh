@@ -80,6 +80,14 @@ draw_text() {
 			echo "$line"
 		fi
 	done
+	if [[ $(( count - topl )) -lt $(( lines - 1 )) ]]
+	then
+		while [[ $(( count - topl )) -lt $(( lines - 1 )) ]]
+		do
+			printf '\e[2K\n'
+			((count++))
+		done
+	fi
 	#printf '\e[0J'
 }
 
