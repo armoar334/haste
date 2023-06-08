@@ -251,11 +251,11 @@ input() {
 				'[1;3D') ((curc=0)) ;; # Alt + left
 				'[1;5C') 
 					temp="${text_buffer[curl]:curc+1}"
-					temp="${temp#*[^[:alnum:]]}"
+					temp="${temp#* }"
 					(( curc = ${#text_buffer[curl]} - ${#temp} - 1 ));; # Ctrl - right
 				'[1;5D')
 					temp="${text_buffer[curl]:0:curc}"
-					temp="${temp%[^[:alnum:]]*}"
+					temp="${temp% *}"
 					(( curc = ${#temp} ));; # Ctrl - left
 				'[F') ((curc=${#text_buffer[curl]})) ;; # End
 				'[H') ((curc=0)) ;; # Home
