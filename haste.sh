@@ -71,7 +71,8 @@ draw_text() {
 	do
 		[[ "$line_numbers" = true ]] && printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
 		printf '\e[K'
-		line="${line//$'\t'/    }"
+		#line="${line//$'\t'/    }"
+		line="${line//$'\t'/ $'\e[90m'=>$'\e[0m' }"
 		if (( ${#line} > columns - 5 ))
 		then
 			echo -n "${line:0:$((columns-6))}"
@@ -480,7 +481,6 @@ help_box() {
 
 	 - Enter one of the following commands, and you see how deep the rabbithole goes...
 	  Interface
-	   line_numbers=[true/false]: set linenumbers on or off
 	   scroll_margin=[0-9]: set scroll margin to the specified number
 	  Text editing
 	   line: run the specified parameter expansion on the current line only
@@ -501,7 +501,7 @@ command_mode() {
 	stty echo
 	read -re -p '$ ' temp
 	case "$temp" in
-		'line_numbers='*|'scroll_margin='*)
+		'scroll_margin='*)
 			eval "$temp" ;;
 		'line'*)
 			IFS=' ' read -r _ temp <<<"$temp"
@@ -574,7 +574,7 @@ running=true
 notify "Welcome to haste! Press ^H to open help"
 while [[ $running == true ]];
 do
-	echo -n "$(
+	printf '%s' "$(
 	draw_text
 	bottom_bar
 	draw_cursor
