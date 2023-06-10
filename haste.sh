@@ -27,7 +27,7 @@ setup_term() {
 	printf '\e[?2004h'  # Bracketed paste
 	printf '\e[?7l'     # Disable line wrapping
 	#printf '\e[?25l'   # Hide cursor
-	printf '\e]0;haste' # Window title
+	printf '\e]0;haste\007' # Window title
 	clear
 	stty -ixon # Disable XON/XOFF
 	stty -echo # Dont echo user input
@@ -69,10 +69,10 @@ draw_text() {
 	printf '\e[H'
 	for line in "${text_buffer[@]:$topl:$((lines-2))}"
 	do
-		[[ "$line_numbers" = true ]] && printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
+		printf '\e[7m%*s\e[0m ' 3 "$count" && ((count+=1))
 		printf '\e[K'
-		#line="${line//$'\t'/    }"
-		line="${line//$'\t'/ $'\e[90m'=>$'\e[0m' }"
+		line="${line//$'\t'/    }"
+		#line="${line//$'\t'/ $'\e[90m'=>$'\e[0m' }"
 		if (( ${#line} > columns - 5 ))
 		then
 			echo -n "${line:0:$((columns-6))}"
@@ -96,7 +96,7 @@ draw_cursor() {
 	local temp="${text_buffer[curl]:0:curc}"
 	local temp2="${text_buffer[curl]:curc}"
 	printf '\e[%sH' "$((curl - topl + 1))"
-	[[ "$line_numbers" = true ]] && printf '\e[4C'
+	printf '\e[4C'
 	temp="${temp//$'\t'/    }"
 	printf '\e[31m'
 	if (( "$curc" > columns / 2 )) && (( ${#text_buffer[curl]} > columns - 6 ))
@@ -583,3 +583,4 @@ do
 done
 
 restore_term
+
